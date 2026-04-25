@@ -277,22 +277,6 @@ vaccine-shipment-tracker/
 ├── docker-compose.yml
 ├── tenderly.yaml
 └── CHECKLIST_COMPLIANCE.md
-```
-
----
-
-## Checklist Compliance (30 / 30)
-
-| # | Criteria | Points |
-|---|----------|--------|
-| 1 | Transparent Proxy — state in proxy, `initialize()` replaces constructor | 5 / 5 |
-| 2 | Aderyn security audit — timestamp dependency + gasless send mitigated | 5 / 5 |
-| 3 | `useWatchContractEvent` → red overlay on `TemperatureAlert`, no page refresh | 5 / 5 |
-| 4 | `docker-compose up` launches node + frontend + Prometheus exporter | 5 / 5 |
-| 5 | Tenderly config + breach test script for tracing reverted `updateStatus` | 5 / 5 |
-| 6 | Grafana alert rule: `increase(reverted[10m]) > 3` → Slack | 5 / 5 |
-
----
 
 ## Common Issues
 
