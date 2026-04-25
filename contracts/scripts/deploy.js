@@ -1,108 +1,106 @@
 const { ethers, upgrades } = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
-  console.log("🚀 Deploying ShipmentTracker with Transparent Proxy...");
-  
-  const [deployer, tracker1, tracker2] = await ethers.getSigners();
-  
-  console.log("Deploying contracts with the account:", deployer.address);
-  console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
+  console.log("🚀 Deploying ShipmentTracker with Transparent Proxy...\n");
 
-  // Deploy the ShipmentTracker implementation behind a Transparent Proxy
+  const [deployer, tracker1, tracker2] = await ethers.getSigners();
+
+  console.log("Deployer  :", deployer.address);
+  console.log("Tracker 1 :", tracker1.address);
+  console.log("Tracker 2 :", tracker2.address);
+  console.log("Balance   :", ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "ETH\n");
+
+  // ── Deploy Transparent Proxy ──────────────────────────────────────────────
   const ShipmentTracker = await ethers.getContractFactory("ShipmentTracker");
-  
-  console.log("📦 Deploying ShipmentTracker implementation...");
-  
-  // Deploy with Transparent Proxy pattern
+
+  console.log("📦 Deploying implementation + proxy...");
   const shipmentTracker = await upgrades.deployProxy(
     ShipmentTracker,
-    [deployer.address], // Initialize with deployer as owner
-    {
-      initializer: 'initialize',
-      kind: 'transparent'
-    }
+    [deployer.address],
+    { initializer: "initialize", kind: "transparent" }
   );
-
   await shipmentTracker.waitForDeployment();
-  
-  const proxyAddress = await shipmentTracker.getAddress();
-  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
-  const adminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
 
-  console.log("✅ ShipmentTracker Proxy deployed to:", proxyAddress);
-  console.log("📋 Implementation address:", implementationAddress);
-  console.log("🔐 Proxy Admin address:", adminAddress);
+  const proxyAddress       = await shipmentTracker.getAddress();
+  const implementationAddr = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const adminAddress       = await upgrades.erc1967.getAdminAddress(proxyAddress);
 
-  // Authorize some tracker devices
+  console.log("✅ Proxy deployed to      :", proxyAddress);
+  console.log("📋 Implementation address :", implementationAddr);
+  console.log("🔐 Proxy Admin address    :", adminAddress);
+
+  // ── Authorize trackers ────────────────────────────────────────────────────
   console.log("\n🔑 Authorizing tracker devices...");
-  
-  await shipmentTracker.authorizeTracker(tracker1.address);
-  console.log("✅ Authorized tracker 1:", tracker1.address);
-  
-  await shipmentTracker.authorizeTracker(tracker2.address);
-  console.log("✅ Authorized tracker 2:", tracker2.address);
+  await (await shipmentTracker.authorizeTracker(tracker1.address)).wait();
+  console.log("  ✅ Tracker 1 authorized:", tracker1.address);
+  await (await shipmentTracker.authorizeTracker(tracker2.address)).wait();
+  console.log("  ✅ Tracker 2 authorized:", tracker2.address);
 
-  // Create a test shipment
-  console.log("\n📦 Creating test shipment...");
-  
-  const tx = await shipmentTracker.createShipment("BATCH-001", tracker1.address);
-  const receipt = await tx.wait();
-  
-  // Find the ShipmentCreated event
-  const shipmentCreatedEvent = receipt.logs.find(
-    log => log.fragment && log.fragment.name === 'ShipmentCreated'
-  );
-  
-  if (shipmentCreatedEvent) {
-    console.log("✅ Test shipment created with ID:", shipmentCreatedEvent.args[0].toString());
-  }
+  // ── Seed: create a test shipment ──────────────────────────────────────────
+  console.log("\n📦 Creating seed shipment BATCH-001...");
+  const createTx = await shipmentTracker.createShipment("BATCH-001", tracker1.address);
+  const createReceipt = await createTx.wait();
+  const createdEvent = createReceipt.logs.find(l => l.fragment?.name === "ShipmentCreated");
+  const shipmentId = createdEvent ? createdEvent.args[0].toString() : "1";
+  console.log("  ✅ Shipment created, ID:", shipmentId);
 
-  // Test temperature update (within safe range)
-  console.log("\n🌡️  Testing temperature update...");
-  
-  const trackerContract = shipmentTracker.connect(tracker1);
-  await trackerContract.updateStatus(1, -500, "Warehouse A"); // -5°C
-  console.log("✅ Temperature updated successfully");
+  // ── Seed: normal temperature update ──────────────────────────────────────
+  console.log("\n🌡️  Sending normal temperature update (-5°C)...");
+  await (await shipmentTracker.connect(tracker1).updateStatus(1, -500, "Cold Storage A")).wait();
+  console.log("  ✅ Temperature updated");
 
-  // Display contract stats
+  // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = await shipmentTracker.getContractStats();
-  console.log("\n📊 Contract Statistics:");
-  console.log("Total Shipments:", stats.total.toString());
-  console.log("Active Shipments:", stats.active.toString());
-  console.log("Next Shipment ID:", stats.nextId.toString());
+  console.log("\n📊 Contract stats:");
+  console.log("  Total shipments :", stats.total.toString());
+  console.log("  Active shipments:", stats.active.toString());
+  console.log("  Next ID         :", stats.nextId.toString());
 
-  // Save deployment info
+  // ── Persist deployment info ───────────────────────────────────────────────
   const deploymentInfo = {
     network: "localhost",
     chainId: 31337,
     contracts: {
       ShipmentTracker: {
         proxy: proxyAddress,
-        implementation: implementationAddress,
-        admin: adminAddress
-      }
+        implementation: implementationAddr,
+        admin: adminAddress,
+      },
     },
     accounts: {
       deployer: deployer.address,
       tracker1: tracker1.address,
-      tracker2: tracker2.address
+      tracker2: tracker2.address,
     },
-    deployedAt: new Date().toISOString()
+    deployedAt: new Date().toISOString(),
   };
 
-  const fs = require('fs');
-  fs.writeFileSync(
-    './deployment-info.json',
-    JSON.stringify(deploymentInfo, null, 2)
-  );
+  fs.writeFileSync("./deployment-info.json", JSON.stringify(deploymentInfo, null, 2));
+  console.log("\n💾 deployment-info.json written");
 
-  console.log("\n💾 Deployment info saved to deployment-info.json");
-  console.log("\n🎉 Deployment completed successfully!");
+  // ── Auto-update frontend .env ─────────────────────────────────────────────
+  const frontendEnv = path.resolve(__dirname, "../../frontend/.env");
+  const envContent = [
+    `VITE_CONTRACT_ADDRESS=${proxyAddress}`,
+    `VITE_CHAIN_ID=31337`,
+    `VITE_RPC_URL=http://127.0.0.1:8545`,
+    `VITE_TRACKER1_ADDRESS=${tracker1.address}`,
+    `VITE_TRACKER2_ADDRESS=${tracker2.address}`,
+  ].join("\n") + "\n";
+
+  fs.writeFileSync(frontendEnv, envContent);
+  console.log("💾 frontend/.env written with contract address:", proxyAddress);
+
+  console.log("\n🎉 Deployment complete!\n");
+  console.log("  Frontend  → http://localhost:5173");
+  console.log("  Hardhat   → http://localhost:8545");
 }
 
 main()
   .then(() => process.exit(0))
-  .catch((error) => {
-    console.error("❌ Deployment failed:", error);
+  .catch((err) => {
+    console.error("❌ Deployment failed:", err);
     process.exit(1);
   });

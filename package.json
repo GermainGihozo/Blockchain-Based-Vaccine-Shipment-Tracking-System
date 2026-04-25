@@ -18,7 +18,7 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "monitoring:setup": "docker-compose up prometheus grafana blockchain-exporter -d",
-    "services:health": "curl -f http://localhost:3000 && curl -f http://localhost:9090 && curl -f http://localhost:3001 && curl -f http://localhost:8080/health",
+    "services:health": "curl -f http://localhost:5173 && curl -f http://localhost:9090 && curl -f http://localhost:3001 && curl -f http://localhost:8080/health",
     "clean": "cd contracts && npx hardhat clean && cd ../frontend && rm -rf node_modules && npm install"
   },
   "devDependencies": {

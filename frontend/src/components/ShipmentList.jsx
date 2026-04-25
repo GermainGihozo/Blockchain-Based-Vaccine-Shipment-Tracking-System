@@ -1,86 +1,64 @@
 import { useState, useEffect } from 'react'
-import { useReadContract } from 'wagmi'
+import { useReadContract, useReadContracts } from 'wagmi'
 import { Package, Thermometer, MapPin, Clock } from 'lucide-react'
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../config/contract'
+import { CONTRACT_ADDRESS, CONTRACT_ABI, STATUS_LABELS } from '../config/contract'
 
 function ShipmentList({ limit, refreshTrigger }) {
-  const [shipments, setShipments] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [shipmentIds, setShipmentIds] = useState([])
 
-  // Get contract stats to know how many shipments exist
-  const { data: stats } = useReadContract({
+  // Get total shipment count
+  const { data: stats, refetch: refetchStats } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'getContractStats',
   })
 
-  // Fetch individual shipments
+  // Build list of IDs to fetch
   useEffect(() => {
-    const fetchShipments = async () => {
-      if (!stats) return
-
-      setLoading(true)
-      const totalShipments = Number(stats[0])
-      const shipmentsToFetch = limit ? Math.min(limit, totalShipments) : totalShipments
-      
-      const shipmentPromises = []
-      for (let i = 1; i <= shipmentsToFetch; i++) {
-        shipmentPromises.push(
-          // This would be replaced with actual contract calls
-          fetch(`/api/shipments/${i}`).catch(() => null)
-        )
-      }
-
-      try {
-        const results = await Promise.all(shipmentPromises)
-        const validShipments = results.filter(Boolean)
-        setShipments(validShipments)
-      } catch (error) {
-        console.error('Error fetching shipments:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchShipments()
+    if (!stats) return
+    const total = Number(stats[2]) - 1  // nextShipmentId - 1 = last id
+    const count = limit ? Math.min(limit, total) : total
+    const ids = Array.from({ length: count }, (_, i) => i + 1)
+    setShipmentIds(ids)
   }, [stats, limit, refreshTrigger])
 
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      0: { label: 'Created', className: 'status-created' },
-      1: { label: 'In Transit', className: 'status-in-transit' },
-      2: { label: 'Temperature Breach', className: 'status-temperature-breach' },
-      3: { label: 'Delivered', className: 'status-delivered' },
-      4: { label: 'Reverted', className: 'status-reverted' },
-    }
-    
-    const statusInfo = statusMap[status] || { label: 'Unknown', className: 'status-created' }
+  // Refetch when refreshTrigger changes
+  useEffect(() => { refetchStats() }, [refreshTrigger])
+
+  // Batch-read all shipments
+  const { data: shipmentsData, isLoading } = useReadContracts({
+    contracts: shipmentIds.map(id => ({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'getShipment',
+      args: [BigInt(id)],
+    })),
+    query: { enabled: shipmentIds.length > 0 },
+  })
+
+  const shipments = (shipmentsData || [])
+    .map(r => r.result)
+    .filter(Boolean)
+    .reverse() // newest first
+
+  const formatTemp = (raw) => (Number(raw) / 100).toFixed(1) + ' °C'
+  const formatTime = (ts)  => new Date(Number(ts) * 1000).toLocaleString()
+
+  const statusClass = (s) => {
+    const n = Number(s)
+    if (n === 0) return 'bg-gray-100 text-gray-700'
+    if (n === 1) return 'bg-blue-100 text-blue-700'
+    if (n === 2) return 'bg-red-100 text-red-700 animate-pulse'
+    if (n === 3) return 'bg-green-100 text-green-700'
+    if (n === 4) return 'bg-orange-100 text-orange-700'
+    return 'bg-gray-100 text-gray-700'
+  }
+
+  if (isLoading || (shipmentIds.length > 0 && !shipmentsData)) {
     return (
-      <span className={statusInfo.className}>
-        {statusInfo.label}
-      </span>
-    )
-  }
-
-  const formatTemperature = (temp) => {
-    return (temp / 100).toFixed(1) + '°C'
-  }
-
-  const formatTimestamp = (timestamp) => {
-    return new Date(timestamp * 1000).toLocaleString()
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="bg-gray-200 rounded-lg p-4">
-              <div className="h-4 bg-gray-300 rounded w-1/4 mb-2"></div>
-              <div className="h-3 bg-gray-300 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-300 rounded w-1/3"></div>
-            </div>
-          </div>
+          <div key={i} className="animate-pulse bg-gray-100 rounded-lg h-20" />
         ))}
       </div>
     )
@@ -88,68 +66,58 @@ function ShipmentList({ limit, refreshTrigger }) {
 
   if (shipments.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>No shipments found</p>
+      <div className="text-center py-10 text-gray-400">
+        <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
+        <p className="font-medium">No shipments yet</p>
         <p className="text-sm">Create your first shipment to get started</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {shipments.map((shipment) => (
-        <div key={shipment.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-3">
+    <div className="space-y-3">
+      {shipments.map((s) => (
+        <div
+          key={s.id.toString()}
+          className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white"
+        >
+          <div className="flex items-start justify-between mb-2">
             <div>
-              <h4 className="font-semibold text-gray-900">
-                Shipment #{shipment.id}
-              </h4>
-              <p className="text-sm text-gray-600">
-                Batch: {shipment.batchNumber}
-              </p>
+              <p className="font-semibold text-gray-900">Shipment #{s.id.toString()}</p>
+              <p className="text-xs text-gray-500">Batch: {s.batchNumber}</p>
             </div>
-            {getStatusBadge(shipment.status)}
+            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusClass(s.status)}`}>
+              {STATUS_LABELS[Number(s.status)] ?? 'Unknown'}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="flex items-center space-x-2">
-              <Thermometer className="w-4 h-4 text-blue-500" />
-              <span>
-                {shipment.currentTemperature !== 0 
-                  ? formatTemperature(shipment.currentTemperature)
-                  : 'No data'
-                }
-              </span>
+          <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+            <div className="flex items-center gap-1">
+              <Thermometer className="w-3 h-3 text-blue-400" />
+              {s.currentTemperature !== 0n ? formatTemp(s.currentTemperature) : '—'}
             </div>
-
-            <div className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-green-500" />
-              <span className="truncate">{shipment.location || 'Unknown'}</span>
+            <div className="flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-green-400" />
+              <span className="truncate">{s.location || '—'}</span>
             </div>
-
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <span>{formatTimestamp(shipment.lastUpdate)}</span>
+            <div className="flex items-center gap-1">
+              <Clock className="w-3 h-3 text-gray-400" />
+              {formatTime(s.lastUpdate)}
             </div>
           </div>
 
-          {shipment.status === 2 && ( // Temperature Breach
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-800">
-                ⚠️ Temperature breach detected! Shipment automatically reverted for safety.
-              </p>
+          {Number(s.status) === 2 && (
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+              ⚠️ Temperature breach — shipment automatically reverted
             </div>
           )}
         </div>
       ))}
 
       {limit && shipments.length >= limit && (
-        <div className="text-center pt-4">
-          <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-            View all shipments →
-          </button>
-        </div>
+        <p className="text-center text-xs text-primary-600 pt-2 cursor-pointer hover:underline">
+          View all shipments →
+        </p>
       )}
     </div>
   )

@@ -95,7 +95,7 @@ npm run test:breach
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| Frontend Dashboard | http://localhost:3000 | Connect Wallet |
+| Frontend Dashboard | http://localhost:5173 | Connect Wallet |
 | Grafana Dashboard | http://localhost:3001 | admin/admin123 |
 | Prometheus | http://localhost:9090 | - |
 | Blockchain Exporter | http://localhost:8080 | - |

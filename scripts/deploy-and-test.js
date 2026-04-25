@@ -72,7 +72,7 @@ async function main() {
       console.log("\n🏥 Checking service health...");
       
       const services = [
-        { name: 'Frontend', url: 'http://localhost:3000' },
+        { name: 'Frontend', url: 'http://localhost:5173' },
         { name: 'Prometheus', url: 'http://localhost:9090' },
         { name: 'Grafana', url: 'http://localhost:3001' },
         { name: 'Blockchain Exporter', url: 'http://localhost:8080/health' }
@@ -96,7 +96,7 @@ async function main() {
     console.log("\n🎉 Deployment Complete!");
     console.log("=" .repeat(60));
     console.log("📋 Service URLs:");
-    console.log("   Frontend Dashboard: http://localhost:3000");
+    console.log("   Frontend Dashboard: http://localhost:5173");
     console.log("   Grafana Dashboard: http://localhost:3001 (admin/admin123)");
     console.log("   Prometheus: http://localhost:9090");
     console.log("   Blockchain Exporter: http://localhost:8080");

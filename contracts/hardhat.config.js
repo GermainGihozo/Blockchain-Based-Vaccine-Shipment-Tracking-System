@@ -1,6 +1,6 @@
-require("@nomicfoundation/hardhat-toolbox");
+require("@nomicfoundation/hardhat-ethers");
+require("@nomicfoundation/hardhat-chai-matchers");
 require("@openzeppelin/hardhat-upgrades");
-require("hardhat-gas-reporter");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -21,11 +21,6 @@ module.exports = {
     hardhat: {
       chainId: 31337
     }
-  },
-  gasReporter: {
-    enabled: true,
-    currency: "USD",
-    gasPrice: 20
   },
   paths: {
     sources: "./contracts",

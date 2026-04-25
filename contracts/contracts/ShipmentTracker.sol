@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title ShipmentTracker
@@ -14,9 +13,20 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 contract ShipmentTracker is 
     Initializable, 
     OwnableUpgradeable, 
-    PausableUpgradeable, 
-    ReentrancyGuardUpgradeable 
+    PausableUpgradeable
 {
+    // Reentrancy guard (proxy-safe: stored in proxy state, not constructor)
+    uint256 private _reentrancyStatus;
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    modifier nonReentrant() {
+        require(_reentrancyStatus != _ENTERED, "ShipmentTracker: reentrant call");
+        _reentrancyStatus = _ENTERED;
+        _;
+        _reentrancyStatus = _NOT_ENTERED;
+    }
+
     // Structs
     struct Shipment {
         uint256 id;
@@ -120,7 +130,8 @@ contract ShipmentTracker is
     function initialize(address _owner) public initializer {
         __Ownable_init(_owner);
         __Pausable_init();
-        __ReentrancyGuard_init();
+        
+        _reentrancyStatus = _NOT_ENTERED;
         
         nextShipmentId = 1;
         totalShipments = 0;

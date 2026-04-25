@@ -280,7 +280,7 @@ cd vaccine-shipment-tracker
 npm run deploy:full
 
 # Access services
-# Frontend: http://localhost:3000
+# Frontend: http://localhost:5173
 # Grafana: http://localhost:3001 (admin/admin123)
 # Prometheus: http://localhost:9090
 ```
