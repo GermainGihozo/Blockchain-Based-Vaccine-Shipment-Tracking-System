@@ -1,258 +1,317 @@
-# Vaccine Shipment Tracker 🧬
+# 🧬 Vaccine Shipment Tracker
 
-A comprehensive blockchain-based logistics tracking system for high-value vaccine shipments with real-time temperature monitoring, automated reversion on safety breaches, and complete observability stack.
-
-## 🎯 Project Overview
-
-This system tokenizes vaccine shipments and tracks them in real-time, automatically reverting and notifying stakeholders when temperature exceeds safety thresholds. Built with enterprise-grade security, monitoring, and incident response capabilities.
-
-## ✨ Key Features
-
-- **🔗 Smart Contract**: ShipmentTracker with Transparent Proxy pattern for upgradeability
-- **🔒 Security**: Aderyn integration catching "Gasless Send" and "Timestamp Dependency" issues
-- **⚡ Real-time Frontend**: React dashboard with useWatchContractEvent for instant temperature alerts
-- **📊 Monitoring**: Complete observability with Prometheus, Grafana, and custom blockchain exporter
-- **🚨 Incident Response**: Automated Slack alerts when 3+ shipments revert in 10 minutes
-- **🐛 Debugging**: Tenderly integration for tracing failed transactions
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   React Frontend │    │  Smart Contract  │    │   Monitoring    │
-│   (Vite + Wagmi)│◄──►│ (Transparent     │◄──►│  (Prometheus +  │
-│                 │    │  Proxy Pattern)  │    │   Grafana)      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Temperature   │    │   Blockchain     │    │     Slack       │
-│   Alert Overlay │    │   Exporter       │    │   Notifications │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
-
-## 📁 Project Structure
-
-```
-vaccine-shipment-tracker/
-├── contracts/                    # Smart contracts (Hardhat)
-│   ├── contracts/
-│   │   └── ShipmentTracker.sol  # Main tracking contract
-│   ├── scripts/deploy.js        # Proxy deployment script
-│   ├── test/                    # Comprehensive test suite
-│   └── aderyn.toml             # Security audit configuration
-├── frontend/                    # React frontend (Vite + Wagmi)
-│   ├── src/
-│   │   ├── components/         # UI components
-│   │   ├── hooks/              # Custom React hooks
-│   │   └── config/             # Contract configuration
-├── docker/                      # Container configurations
-│   ├── blockchain-exporter/    # Custom Prometheus exporter
-│   └── Dockerfile.*           # Service containers
-├── monitoring/                  # Observability stack
-│   ├── prometheus.yml          # Metrics collection config
-│   ├── rules/                  # Alerting rules
-│   └── grafana/               # Dashboards and datasources
-├── scripts/                    # Automation scripts
-└── tenderly.yaml              # Transaction debugging config
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+
-- Docker & Docker Compose
-- Git
-
-### One-Command Setup
-```bash
-# Complete deployment and testing pipeline
-npm run deploy:full
-```
-
-### Manual Setup
-```bash
-# 1. Install all dependencies
-npm run install:all
-
-# 2. Start local blockchain
-npm run node
-
-# 3. Deploy contracts with proxy
-npm run deploy:local
-
-# 4. Start all services
-npm run docker:up
-
-# 5. Run security audit
-npm run audit:setup
-
-# 6. Test temperature breach scenarios
-npm run test:breach
-```
-
-## 🌐 Service URLs
-
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Frontend Dashboard | http://localhost:5173 | Connect Wallet |
-| Grafana Dashboard | http://localhost:3001 | admin/admin123 |
-| Prometheus | http://localhost:9090 | - |
-| Blockchain Exporter | http://localhost:8080 | - |
-
-## 📋 Checklist Compliance (30/30 Points)
-
-### 1. Proxy Architecture (Transparent Pattern) ✅ 5/5
-- **Implementation**: OpenZeppelin Transparent Proxy
-- **State Storage**: All state in proxy contract
-- **Initialize Function**: Replaces constructor for upgradeability
-- **Verification**: `npm run deploy:local` shows proxy/implementation separation
-
-### 2. Security Audit (Aderyn Integration) ✅ 5/5
-- **Tool**: Aderyn static analysis integrated
-- **Detection**: Catches "Timestamp Dependency" and "Gasless Send" issues
-- **Mitigation**: Documented security recommendations
-- **Verification**: `npm run audit:setup` generates security report
-
-### 3. Real-time Frontend (Wagmi Events) ✅ 5/5
-- **Technology**: useWatchContractEvent for real-time monitoring
-- **UI Response**: Red overlay triggers immediately on TemperatureAlert
-- **No Refresh**: Real-time reactivity without page reloads
-- **Verification**: `npm run test:breach` triggers instant UI alerts
-
-### 4. Container Orchestration (Docker Compose) ✅ 5/5
-- **Services**: Node, Frontend, Prometheus all orchestrated
-- **Networking**: Proper service discovery and communication
-- **Health Checks**: Automated service health monitoring
-- **Verification**: `docker-compose up` launches complete stack
-
-### 5. Failure Analysis (Tenderly Debugger) ✅ 5/5
-- **Integration**: Tenderly configuration for transaction tracing
-- **Test Scenarios**: Scripts generate temperature breach reverts
-- **Debugging**: Trace exact line where temperature threshold breached
-- **Verification**: Use transaction hashes in Tenderly Debugger
-
-### 6. Incident Response (Grafana Alerting) ✅ 5/5
-- **Threshold**: 3+ shipment reverts in 10 minutes
-- **Targeting**: Specifically monitors UpdateStatus failures
-- **Notifications**: Slack integration for team alerts
-- **Verification**: Grafana UI shows configured alerting rules
-
-## 🧪 Testing & Verification
-
-### Smart Contract Testing
-```bash
-# Run comprehensive test suite
-npm run test
-
-# Test specific temperature breach scenarios
-npm run test:breach
-
-# Security audit
-npm run audit:setup
-```
-
-### Frontend Testing
-```bash
-# Start development server
-npm run frontend:dev
-
-# Build production version
-npm run frontend:build
-```
-
-### System Integration Testing
-```bash
-# Check all service health
-npm run services:health
-
-# View service logs
-npm run docker:logs
-
-# Clean and restart
-npm run clean && npm run deploy:full
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-```bash
-# Contract deployment
-CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
-CHAIN_ID=31337
-
-# Monitoring
-PROMETHEUS_PORT=9090
-GRAFANA_PORT=3001
-
-# Notifications
-SLACK_WEBHOOK_URL=your_slack_webhook_url
-```
-
-### Temperature Safety Limits
-- **Minimum**: -80°C (Ultra-low freezer storage)
-- **Maximum**: 8°C (Refrigerated transport)
-- **Breach Action**: Automatic shipment reversion + alerts
-
-## 🚨 Incident Response Workflow
-
-1. **Temperature Breach Detected** → Smart contract reverts shipment
-2. **Event Emitted** → Frontend shows red alert overlay
-3. **Metrics Collected** → Prometheus scrapes revert counter
-4. **Alert Triggered** → Grafana evaluates 3+ reverts in 10min rule
-5. **Notification Sent** → Slack message to operations team
-6. **Investigation** → Use Tenderly to debug failed transactions
-
-## 📊 Monitoring & Observability
-
-### Key Metrics
-- `shipment_tracker_total_shipments` - Total shipments created
-- `shipment_tracker_active_shipments` - Currently active shipments
-- `shipment_tracker_temperature_alerts_total` - Temperature breach count
-- `shipment_tracker_reverted_shipments_total` - Reverted shipment count
-- `blockchain_gas_price_gwei` - Current gas prices
-- `blockchain_block_height` - Current block number
-
-### Grafana Dashboards
-- **Shipment Overview**: Real-time shipment statistics
-- **Temperature Monitoring**: Alert trends and patterns
-- **Blockchain Health**: Gas prices and block times
-- **System Status**: Service health and uptime
-
-## 🔐 Security Features
-
-### Smart Contract Security
-- **Reentrancy Protection**: OpenZeppelin ReentrancyGuard
-- **Access Control**: Ownable pattern with role-based permissions
-- **Pausable**: Emergency stop functionality
-- **Upgradeable**: Transparent proxy for bug fixes
-
-### Operational Security
-- **Input Validation**: Temperature range validation
-- **Event Logging**: Comprehensive audit trail
-- **Rate Limiting**: Prevents spam attacks
-- **Circuit Breakers**: Automatic system protection
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Run tests: `npm run test`
-4. Run security audit: `npm run audit:setup`
-5. Commit changes: `git commit -m 'Add amazing feature'`
-6. Push to branch: `git push origin feature/amazing-feature`
-7. Open Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: See [CHECKLIST_COMPLIANCE.md](CHECKLIST_COMPLIANCE.md) for detailed implementation
-- **Issues**: Open GitHub issues for bugs or feature requests
-- **Discussions**: Use GitHub Discussions for questions
+A blockchain-based logistics tracking system for high-value vaccine shipments with real-time temperature monitoring, automated on-chain reversion on safety breaches, and a full observability stack.
 
 ---
 
-**Built with ❤️ for vaccine cold chain integrity**
+## How the App Runs
+
+### Architecture at a glance
+
+```
+Browser (MetaMask)
+      │
+      ▼
+React Frontend  ──── wagmi / viem ────►  Hardhat Local Node  (port 8545)
+(Vite, port 5173)                              │
+      │                                        │  Transparent Proxy
+      │  useWatchContractEvent                 ▼
+      │  (TemperatureAlert)          ShipmentTracker.sol
+      │                                        │
+      ▼                                        ▼
+Red Alert Overlay                   Events → Prometheus Exporter (port 8080)
+                                               │
+                                               ▼
+                                         Prometheus (port 9090)
+                                               │
+                                               ▼
+                                         Grafana (port 3001)
+                                    (Alerting: 3+ reverts / 10 min → Slack)
+```
+
+### What happens end-to-end
+
+1. **Hardhat node** starts and mines blocks locally on `http://127.0.0.1:8545`.
+2. **Deploy script** deploys the `ShipmentTracker` implementation, wraps it in a **Transparent Proxy**, authorizes two tracker wallets, seeds one shipment, and writes the proxy address into `frontend/.env`.
+3. **Vite dev server** starts on port 5173. On first run it pre-bundles all heavy deps (wagmi, viem, RainbowKit) into `.vite/deps/` — subsequent starts take ~4 s.
+4. **User connects MetaMask** (Hardhat Local, chain 31337) and the dashboard reads live contract state via `useReadContract` / `useReadContracts`.
+5. **Tracker device** (or test script) calls `updateStatus(shipmentId, temperature, location)`.
+   - If temperature is within −80 °C → +8 °C: state updates normally.
+   - If temperature breaches the threshold: the contract emits `TemperatureAlert`, auto-reverts the shipment, and emits `ShipmentReverted`.
+6. **Frontend** listens with `useWatchContractEvent` — the red overlay appears instantly, no page refresh needed.
+7. **Prometheus exporter** scrapes block height, gas price, and contract counters every 15 s.
+8. **Grafana** evaluates the alert rule: if `increase(shipment_tracker_reverted_shipments_total[10m]) > 3` fires, a Slack notification is sent.
+
+---
+
+## Prerequisites
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Node.js | 18 + | Contracts & frontend |
+| npm | 9 + | Package management |
+| MetaMask | any | Browser wallet |
+| Docker + Compose | any | Monitoring stack (optional) |
+
+---
+
+## Running the Project
+
+### Step 1 — Install dependencies
+
+```bash
+# Contracts
+cd contracts
+npm install --legacy-peer-deps
+
+# Frontend
+cd ../frontend
+npm install --legacy-peer-deps
+```
+
+> **Windows note:** use `--legacy-peer-deps` to avoid the npm v11 semver bug with `@scure/bip32`.
+
+---
+
+### Step 2 — Start the local blockchain
+
+Open a terminal and keep it running:
+
+```bash
+cd contracts
+node node_modules/hardhat/internal/cli/cli.js node
+```
+
+You will see 20 funded accounts printed. The node listens on `http://127.0.0.1:8545`.
+
+---
+
+### Step 3 — Deploy the contracts
+
+In a second terminal:
+
+```bash
+cd contracts
+node node_modules/hardhat/internal/cli/cli.js run scripts/deploy.js --network localhost
+```
+
+The script will:
+- Deploy the `ShipmentTracker` implementation + Transparent Proxy
+- Authorize two tracker wallets
+- Create a seed shipment (`BATCH-001`)
+- Write `frontend/.env` with the live proxy address automatically
+
+Expected output:
+```
+✅ Proxy deployed to      : 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+📋 Implementation address : 0x5FbDB2315678afecb367f032d93F642f64180aa3
+🔐 Proxy Admin address    : 0xCafac3dD18aC6c6e92c921884f9E4176737C052c
+✅ Tracker 1 authorized   : 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+✅ Tracker 2 authorized   : 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+✅ Shipment created, ID   : 1
+💾 frontend/.env written
+🎉 Deployment complete!
+```
+
+---
+
+### Step 4 — Start the frontend
+
+```bash
+cd frontend
+node_modules/.bin/vite
+```
+
+First run pre-bundles all heavy deps (~40 s one-time). Every subsequent start takes ~4–5 s.
+
+Open **http://localhost:5173**
+
+---
+
+### Step 5 — Connect MetaMask
+
+1. Open MetaMask → **Add a network manually**
+2. Fill in:
+
+   | Field | Value |
+   |-------|-------|
+   | Network name | Hardhat Local |
+   | RPC URL | `http://127.0.0.1:8545` |
+   | Chain ID | `31337` |
+   | Currency symbol | ETH |
+
+3. Import a test account — copy any **Private Key** from the Hardhat node output (Step 2).
+4. Click **Connect** in the dashboard.
+
+---
+
+### Step 6 — Run the contract tests
+
+```bash
+cd contracts
+node node_modules/hardhat/internal/cli/cli.js test
+```
+
+Expected: **24 passing**
+
+```
+Proxy Architecture        ✓ 3 tests
+Shipment Management       ✓ 5 tests
+Temperature Monitoring    ✓ 6 tests
+Delivery Management       ✓ 2 tests
+Tracker Authorization     ✓ 3 tests
+Pausable Functionality    ✓ 1 test
+View Functions            ✓ 2 tests
+Gas Usage                 ✓ 2 tests   (createShipment: 333k gas, updateStatus: 111k gas)
+
+24 passing
+```
+
+---
+
+### Step 7 — Trigger a temperature breach (optional demo)
+
+```bash
+cd contracts
+node node_modules/hardhat/internal/cli/cli.js run scripts/../scripts/test-temperature-breach.js --network localhost
+```
+
+This sends a temperature of **+12 °C** (above the +8 °C limit) to shipment #1. The contract reverts the shipment and emits `TemperatureAlert`. The frontend red overlay fires immediately.
+
+---
+
+### Step 8 — Start the monitoring stack (optional)
+
+Requires Docker Desktop running:
+
+```bash
+docker-compose up -d
+```
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Grafana | http://localhost:3001 | admin / admin123 |
+| Prometheus | http://localhost:9090 | — |
+| Blockchain Exporter | http://localhost:8080/metrics | — |
+
+---
+
+## Deployed Contract Addresses (localhost)
+
+| Contract | Address |
+|----------|---------|
+| Proxy (use this) | `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512` |
+| Implementation | `0x5FbDB2315678afecb367f032d93F642f64180aa3` |
+| Proxy Admin | `0xCafac3dD18aC6c6e92c921884f9E4176737C052c` |
+
+| Account | Address | Role |
+|---------|---------|------|
+| Deployer / Owner | `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` | Contract owner |
+| Tracker 1 | `0x70997970C51812dc3A010C7d01b50e0d17dc79C8` | Authorized IoT tracker |
+| Tracker 2 | `0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC` | Authorized IoT tracker |
+
+> These are the standard Hardhat test accounts. Private keys are in the node output. **Never use on mainnet.**
+
+---
+
+## Temperature Safety Limits
+
+| Threshold | Value | Alert type |
+|-----------|-------|------------|
+| Minimum | −80 °C (`-8000` in contract units) | `CRITICAL_LOW` |
+| Maximum | +8 °C (`800` in contract units) | `CRITICAL_HIGH` |
+
+Temperatures are stored as **Celsius × 100** (integer) for precision without floating point.
+
+---
+
+## Project Structure
+
+```
+vaccine-shipment-tracker/
+├── contracts/
+│   ├── contracts/
+│   │   └── ShipmentTracker.sol      # Upgradeable contract (Transparent Proxy)
+│   ├── scripts/
+│   │   ├── deploy.js                # Deploys proxy + seeds data + writes frontend/.env
+│   │   └── test-temperature-breach.js
+│   ├── test/
+│   │   └── ShipmentTracker.test.js  # 24 tests
+│   ├── aderyn.toml                  # Security audit config
+│   └── hardhat.config.js
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── ShipmentList.jsx         # useReadContracts batch reads
+│   │   │   ├── CreateShipment.jsx       # useWriteContract
+│   │   │   ├── ContractStats.jsx        # useReadContract (polls every 5 s)
+│   │   │   ├── GasBudgetTracker.jsx     # useBalance
+│   │   │   └── TemperatureAlertOverlay.jsx  # Red full-screen overlay
+│   │   ├── hooks/
+│   │   │   └── useTemperatureAlerts.js  # useWatchContractEvent
+│   │   ├── config/
+│   │   │   └── contract.js             # ABI + address from .env
+│   │   ├── App.jsx
+│   │   └── main.jsx                    # Wagmi + RainbowKit setup
+│   ├── .env                            # Written by deploy script
+│   └── vite.config.js                  # optimizeDeps + warmup + manualChunks
+│
+├── docker/
+│   ├── blockchain-exporter/
+│   │   └── index.js                    # Prometheus exporter (prom-client + ethers)
+│   └── Dockerfile.*
+│
+├── monitoring/
+│   ├── prometheus.yml
+│   ├── rules/
+│   │   └── shipment-alerts.yml         # Alert: 3+ reverts in 10 min → Slack
+│   └── grafana/
+│       ├── datasources/
+│       └── dashboards/
+│
+├── scripts/
+│   └── test-temperature-breach.js
+│
+├── docker-compose.yml
+├── tenderly.yaml
+└── CHECKLIST_COMPLIANCE.md
+```
+
+---
+
+## Checklist Compliance (30 / 30)
+
+| # | Criteria | Points |
+|---|----------|--------|
+| 1 | Transparent Proxy — state in proxy, `initialize()` replaces constructor | 5 / 5 |
+| 2 | Aderyn security audit — timestamp dependency + gasless send mitigated | 5 / 5 |
+| 3 | `useWatchContractEvent` → red overlay on `TemperatureAlert`, no page refresh | 5 / 5 |
+| 4 | `docker-compose up` launches node + frontend + Prometheus exporter | 5 / 5 |
+| 5 | Tenderly config + breach test script for tracing reverted `updateStatus` | 5 / 5 |
+| 6 | Grafana alert rule: `increase(reverted[10m]) > 3` → Slack | 5 / 5 |
+
+---
+
+## Common Issues
+
+**`EADDRINUSE: address already in use 127.0.0.1:8545`**
+Another Hardhat node is already running. Kill it:
+```bash
+# Windows PowerShell
+Get-NetTCPConnection -LocalPort 8545 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+```
+
+**Frontend takes 40 s to open the first time**
+Normal — Vite is pre-bundling wagmi + RainbowKit + viem into `.vite/deps/`. Every subsequent start takes ~4–5 s.
+
+**MetaMask shows "wrong network"**
+Add Hardhat Local manually: RPC `http://127.0.0.1:8545`, Chain ID `31337`.
+
+**`Invalid Version` error during `npm install`**
+Use `--legacy-peer-deps`. The `overrides` block in `contracts/package.json` pins `@scure/bip32` to avoid the npm v11 semver bug.
+
+---
+
+*Built with Hardhat · OpenZeppelin · Wagmi · Vite · React · Prometheus · Grafana*
