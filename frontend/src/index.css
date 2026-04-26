@@ -10,7 +10,8 @@
 @layer components {
   /* ── Cards ── */
   .card {
-    @apply bg-slate-900 rounded-2xl border border-slate-800 p-6;
+    @apply bg-slate-900 rounded-2xl border border-slate-800 p-6
+           shadow-lg shadow-black/20;
   }
   .card-sm {
     @apply bg-slate-900 rounded-xl border border-slate-800 p-4;
@@ -24,16 +25,22 @@
            disabled:opacity-40 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply btn bg-cyan-500 text-slate-950 hover:bg-cyan-400 focus:ring-cyan-500;
+    @apply btn bg-cyan-500 text-slate-950 hover:bg-cyan-400
+           shadow-md shadow-cyan-500/20 hover:shadow-cyan-400/30
+           focus:ring-cyan-500;
   }
   .btn-danger {
-    @apply btn bg-red-500 text-white hover:bg-red-400 focus:ring-red-500;
+    @apply btn bg-red-500 text-white hover:bg-red-400
+           shadow-md shadow-red-500/20
+           focus:ring-red-500;
   }
   .btn-ghost {
     @apply btn bg-slate-800 text-slate-200 hover:bg-slate-700 focus:ring-slate-500;
   }
   .btn-success {
-    @apply btn bg-emerald-500 text-white hover:bg-emerald-400 focus:ring-emerald-500;
+    @apply btn bg-emerald-500 text-white hover:bg-emerald-400
+           shadow-md shadow-emerald-500/20
+           focus:ring-emerald-500;
   }
 
   /* ── Inputs ── */
@@ -41,6 +48,7 @@
     @apply w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm
            text-slate-100 placeholder-slate-500
            focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500
+           transition-colors duration-150
            disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
@@ -48,15 +56,15 @@
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
   }
-  .badge-created   { @apply badge bg-slate-700 text-slate-300; }
-  .badge-transit   { @apply badge bg-cyan-900 text-cyan-300; }
-  .badge-breach    { @apply badge bg-red-900 text-red-300 animate-pulse; }
-  .badge-delivered { @apply badge bg-emerald-900 text-emerald-300; }
-  .badge-reverted  { @apply badge bg-orange-900 text-orange-300; }
+  .badge-created   { @apply badge bg-slate-700/80 text-slate-300 ring-1 ring-slate-600/50; }
+  .badge-transit   { @apply badge bg-cyan-900/80 text-cyan-300 ring-1 ring-cyan-700/50; }
+  .badge-breach    { @apply badge bg-red-900/80 text-red-300 ring-1 ring-red-700/50 animate-pulse; }
+  .badge-delivered { @apply badge bg-emerald-900/80 text-emerald-300 ring-1 ring-emerald-700/50; }
+  .badge-reverted  { @apply badge bg-orange-900/80 text-orange-300 ring-1 ring-orange-700/50; }
 
   /* ── Stat card ── */
   .stat-card {
-    @apply card-sm flex flex-col gap-1;
+    @apply card-sm flex flex-col gap-1 relative overflow-hidden;
   }
 
   /* ── Temperature gauge track ── */
@@ -73,6 +81,23 @@
     background: rgba(15, 23, 42, 0.92);
     backdrop-filter: blur(8px);
   }
+
+  /* ── Gradient text ── */
+  .text-gradient-cyan {
+    @apply bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent;
+  }
+
+  /* ── Shimmer skeleton ── */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      theme('colors.slate.800') 25%,
+      theme('colors.slate.700') 50%,
+      theme('colors.slate.800') 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
 }
 
 /* ── Scrollbar ── */
@@ -83,3 +108,15 @@
 
 /* ── Slider thumb ── */
 input[type='range'] { @apply accent-cyan-500; }
+
+/* ── Shimmer keyframe ── */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Header gradient line ── */
+.header-line {
+  background: linear-gradient(90deg, transparent, #06b6d4 30%, #3b82f6 70%, transparent);
+  height: 1px;
+}

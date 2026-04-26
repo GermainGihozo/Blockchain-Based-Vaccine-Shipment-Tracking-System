@@ -37,9 +37,15 @@ function ShipmentRow({ s }) {
   const hasMaxTemp = s.maxTemperature !== INT256_MIN
 
   return (
-    <div className={`rounded-xl border transition-all duration-200 ${
+    <div className={`relative rounded-xl border transition-all duration-200 overflow-hidden ${
       isBreach ? 'border-red-500/30 bg-red-950/20' : 'border-slate-800 bg-slate-900/60'
     }`}>
+      {/* Left accent stripe */}
+      <div className={`absolute left-0 top-0 bottom-0 w-0.5 rounded-l-xl ${
+        status === 1 ? 'bg-cyan-500' :
+        isBreach    ? 'bg-red-500'   :
+        status === 3 ? 'bg-emerald-500' : 'bg-slate-700'
+      }`} style={{ position: 'absolute' }} />
       {/* Summary row */}
       <button
         onClick={() => setOpen(o => !o)}
@@ -154,7 +160,7 @@ export default function ShipmentList({ limit, refreshTrigger }) {
     return (
       <div className="space-y-2">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-14 bg-slate-800 rounded-xl animate-pulse" />
+          <div key={i} className="h-14 shimmer rounded-xl" />
         ))}
       </div>
     )

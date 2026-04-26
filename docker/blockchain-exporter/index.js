@@ -1,188 +1,197 @@
-const express = require('express');
-const client = require('prom-client');
-const { ethers } = require('ethers');
-const cron = require('node-cron');
+const express  = require('express')
+const client   = require('prom-client')
+const { ethers } = require('ethers')
 
-const app = express();
-const port = process.env.EXPORTER_PORT || 8080;
-const rpcUrl = process.env.BLOCKCHAIN_RPC_URL || 'http://localhost:8545';
-const contractAddress = process.env.CONTRACT_ADDRESS;
+const app             = express()
+const PORT            = parseInt(process.env.EXPORTER_PORT || '8080', 10)
+const RPC_URL         = process.env.BLOCKCHAIN_RPC_URL || 'http://localhost:8545'
+const CONTRACT_ADDR   = process.env.CONTRACT_ADDRESS || ''
+const SCRAPE_INTERVAL = parseInt(process.env.SCRAPE_INTERVAL_MS || '15000', 10)
 
-// Create a Registry to register the metrics
-const register = new client.Registry();
+// ── Prometheus registry ───────────────────────────────────────────────────────
+const register = new client.Registry()
+register.setDefaultLabels({ app: 'vaccine-shipment-tracker' })
+client.collectDefaultMetrics({ register })
 
-// Add a default label which is added to all metrics
-register.setDefaultLabels({
-  app: 'vaccine-shipment-tracker'
-});
-
-// Enable the collection of default metrics
-client.collectDefaultMetrics({ register });
-
-// Custom metrics
-const blockHeight = new client.Gauge({
+// ── Custom metrics ────────────────────────────────────────────────────────────
+const mBlockHeight = new client.Gauge({
   name: 'blockchain_block_height',
-  help: 'Current block height of the blockchain',
-  registers: [register]
-});
+  help: 'Latest block number',
+  registers: [register],
+})
 
-const blockTime = new client.Gauge({
+const mBlockTime = new client.Gauge({
   name: 'blockchain_block_time_seconds',
-  help: 'Time between blocks in seconds',
-  registers: [register]
-});
+  help: 'Seconds between the two most recent blocks',
+  registers: [register],
+})
 
-const gasPrice = new client.Gauge({
+const mGasPrice = new client.Gauge({
   name: 'blockchain_gas_price_gwei',
   help: 'Current gas price in Gwei',
-  registers: [register]
-});
+  registers: [register],
+})
 
-const totalShipments = new client.Gauge({
+const mTotalShipments = new client.Gauge({
   name: 'shipment_tracker_total_shipments',
-  help: 'Total number of shipments created',
-  registers: [register]
-});
+  help: 'Total shipments ever created',
+  registers: [register],
+})
 
-const activeShipments = new client.Gauge({
+const mActiveShipments = new client.Gauge({
   name: 'shipment_tracker_active_shipments',
-  help: 'Number of active shipments',
-  registers: [register]
-});
+  help: 'Currently active shipments',
+  registers: [register],
+})
 
-const temperatureAlerts = new client.Counter({
+const mTempAlerts = new client.Counter({
   name: 'shipment_tracker_temperature_alerts_total',
-  help: 'Total number of temperature alerts',
+  help: 'Total temperature breach alerts emitted',
   labelNames: ['alert_type'],
-  registers: [register]
-});
+  registers: [register],
+})
 
-const revertedShipments = new client.Counter({
+const mReverted = new client.Counter({
   name: 'shipment_tracker_reverted_shipments_total',
-  help: 'Total number of reverted shipments',
+  help: 'Total shipments reverted due to temperature breach',
   labelNames: ['reason'],
-  registers: [register]
-});
+  registers: [register],
+})
 
-// Initialize provider and contract
-let provider;
-let contract;
+const mScrapeErrors = new client.Counter({
+  name: 'exporter_scrape_errors_total',
+  help: 'Total number of scrape errors',
+  registers: [register],
+})
 
-const contractABI = [
-  "function getContractStats() view returns (uint256 total, uint256 active, uint256 nextId)",
-  "event TemperatureAlert(uint256 indexed shipmentId, int256 temperature, int256 threshold, string alertType, uint256 timestamp)",
-  "event ShipmentReverted(uint256 indexed shipmentId, string reason, uint256 timestamp)"
-];
+// ── Contract ABI (minimal) ────────────────────────────────────────────────────
+const CONTRACT_ABI = [
+  'function getContractStats() view returns (uint256 total, uint256 active, uint256 nextId)',
+  'event TemperatureAlert(uint256 indexed shipmentId, int256 temperature, int256 threshold, string alertType, uint256 timestamp)',
+  'event ShipmentReverted(uint256 indexed shipmentId, string reason, uint256 timestamp)',
+]
 
-async function initializeBlockchain() {
+// ── State ─────────────────────────────────────────────────────────────────────
+let provider = null
+let contract = null
+let connected = false
+
+// ── Connect with retry ────────────────────────────────────────────────────────
+async function connect(attempt = 1) {
   try {
-    provider = new ethers.JsonRpcProvider(rpcUrl);
-    
-    if (contractAddress) {
-      contract = new ethers.Contract(contractAddress, contractABI, provider);
-      
-      // Listen for events
-      contract.on('TemperatureAlert', (shipmentId, temperature, threshold, alertType, timestamp) => {
-        console.log(`Temperature alert: Shipment ${shipmentId}, Type: ${alertType}`);
-        temperatureAlerts.labels(alertType).inc();
-      });
-      
-      contract.on('ShipmentReverted', (shipmentId, reason, timestamp) => {
-        console.log(`Shipment reverted: ${shipmentId}, Reason: ${reason}`);
-        revertedShipments.labels(reason).inc();
-      });
+    provider = new ethers.JsonRpcProvider(RPC_URL)
+    // Verify connection
+    await provider.getBlockNumber()
+    connected = true
+    console.log(`[exporter] Connected to ${RPC_URL} (attempt ${attempt})`)
+
+    if (CONTRACT_ADDR) {
+      contract = new ethers.Contract(CONTRACT_ADDR, CONTRACT_ABI, provider)
+
+      contract.on('TemperatureAlert', (shipmentId, _temp, _thresh, alertType) => {
+        console.log(`[event] TemperatureAlert shipment=${shipmentId} type=${alertType}`)
+        mTempAlerts.labels(alertType).inc()
+      })
+
+      contract.on('ShipmentReverted', (shipmentId, reason) => {
+        console.log(`[event] ShipmentReverted shipment=${shipmentId} reason="${reason}"`)
+        mReverted.labels(reason).inc()
+      })
+
+      // Reconnect on provider error
+      provider.on('error', (err) => {
+        console.error('[provider] Error:', err.message)
+        connected = false
+        setTimeout(() => connect(attempt + 1), 5000)
+      })
+
+      console.log(`[exporter] Listening to contract ${CONTRACT_ADDR}`)
+    } else {
+      console.warn('[exporter] CONTRACT_ADDRESS not set — contract metrics disabled')
     }
-    
-    console.log('Blockchain connection initialized');
-  } catch (error) {
-    console.error('Failed to initialize blockchain connection:', error);
+  } catch (err) {
+    connected = false
+    const delay = Math.min(30000, attempt * 3000)
+    console.error(`[exporter] Connection failed (attempt ${attempt}): ${err.message}`)
+    console.log(`[exporter] Retrying in ${delay / 1000}s…`)
+    setTimeout(() => connect(attempt + 1), delay)
   }
 }
 
-async function updateMetrics() {
+// ── Scrape metrics ────────────────────────────────────────────────────────────
+async function scrape() {
+  if (!connected || !provider) return
+
   try {
-    // Get latest block
-    const latestBlock = await provider.getBlock('latest');
-    if (latestBlock) {
-      blockHeight.set(latestBlock.number);
-      
-      // Calculate block time (time since previous block)
-      const previousBlock = await provider.getBlock(latestBlock.number - 1);
-      if (previousBlock) {
-        const timeDiff = latestBlock.timestamp - previousBlock.timestamp;
-        blockTime.set(timeDiff);
+    // Block height + block time
+    const latest = await provider.getBlock('latest')
+    if (latest) {
+      mBlockHeight.set(latest.number)
+
+      if (latest.number > 0) {
+        const prev = await provider.getBlock(latest.number - 1)
+        if (prev) mBlockTime.set(latest.timestamp - prev.timestamp)
       }
     }
-    
-    // Get gas price
-    const feeData = await provider.getFeeData();
-    if (feeData.gasPrice) {
-      const gasPriceGwei = parseFloat(ethers.formatUnits(feeData.gasPrice, 'gwei'));
-      gasPrice.set(gasPriceGwei);
+
+    // Gas price
+    const fee = await provider.getFeeData()
+    if (fee.gasPrice) {
+      mGasPrice.set(parseFloat(ethers.formatUnits(fee.gasPrice, 'gwei')))
     }
-    
-    // Get contract stats if contract is available
+
+    // Contract stats
     if (contract) {
-      try {
-        const stats = await contract.getContractStats();
-        totalShipments.set(Number(stats[0]));
-        activeShipments.set(Number(stats[1]));
-      } catch (contractError) {
-        console.warn('Could not fetch contract stats:', contractError.message);
-      }
+      const stats = await contract.getContractStats()
+      mTotalShipments.set(Number(stats[0]))
+      mActiveShipments.set(Number(stats[1]))
     }
-    
-  } catch (error) {
-    console.error('Error updating metrics:', error);
+  } catch (err) {
+    mScrapeErrors.inc()
+    console.error('[scrape] Error:', err.message)
+    // If RPC is gone, trigger reconnect
+    if (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
+      connected = false
+      setTimeout(() => connect(), 5000)
+    }
   }
 }
 
-// Metrics endpoint
-app.get('/metrics', async (req, res) => {
+// ── HTTP endpoints ────────────────────────────────────────────────────────────
+app.get('/metrics', async (_req, res) => {
   try {
-    res.set('Content-Type', register.contentType);
-    res.end(await register.metrics());
-  } catch (error) {
-    res.status(500).end(error);
+    res.set('Content-Type', register.contentType)
+    res.end(await register.metrics())
+  } catch (err) {
+    res.status(500).end(String(err))
   }
-});
+})
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
-    timestamp: new Date().toISOString(),
-    rpcUrl: rpcUrl,
-    contractAddress: contractAddress || 'not configured'
-  });
-});
-
-// Root endpoint
-app.get('/', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
-    name: 'Blockchain Metrics Exporter',
-    version: '1.0.0',
-    endpoints: {
-      metrics: '/metrics',
-      health: '/health'
-    }
-  });
-});
+    status: connected ? 'healthy' : 'degraded',
+    connected,
+    rpcUrl: RPC_URL,
+    contractAddress: CONTRACT_ADDR || 'not configured',
+    timestamp: new Date().toISOString(),
+  })
+})
 
-// Update metrics every 15 seconds
-cron.schedule('*/15 * * * * *', updateMetrics);
+app.get('/', (_req, res) => {
+  res.json({
+    name: 'VaccineChain Blockchain Exporter',
+    version: '1.1.0',
+    endpoints: { metrics: '/metrics', health: '/health' },
+  })
+})
 
-// Initialize and start server
-async function start() {
-  await initializeBlockchain();
-  
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`Blockchain exporter listening on port ${port}`);
-    console.log(`Metrics available at http://localhost:${port}/metrics`);
-    
-    // Initial metrics update
-    updateMetrics();
-  });
-}
-
-start().catch(console.error);
+// ── Start ─────────────────────────────────────────────────────────────────────
+app.listen(PORT, '0.0.0.0', async () => {
+  console.log(`[exporter] Listening on port ${PORT}`)
+  console.log(`[exporter] Metrics: http://localhost:${PORT}/metrics`)
+  console.log(`[exporter] Health:  http://localhost:${PORT}/health`)
+  await connect()
+  // Initial scrape then poll
+  await scrape()
+  setInterval(scrape, SCRAPE_INTERVAL)
+})
