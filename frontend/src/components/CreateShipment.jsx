@@ -32,6 +32,7 @@ export default function CreateShipment({ onShipmentCreated }) {
       abi: CONTRACT_ABI,
       functionName: 'createShipment',
       args: [batchNumber.trim(), trackerAddress.trim()],
+      gas: 500_000n,   // well above actual ~334k, well below MetaMask's 16.7M cap
     })
   }
 

@@ -29,8 +29,19 @@ export default function Dashboard() {
     <div className="space-y-6 animate-fade-in">
 
       {/* ── Hero banner ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-600/20 via-slate-900 to-slate-900 border border-cyan-500/20 p-6">
-        <div className="absolute inset-0 bg-grid-slate opacity-30 pointer-events-none" />
+      <div
+        className="relative overflow-hidden rounded-2xl border border-cyan-500/20 p-6"
+        style={{
+          background: 'linear-gradient(135deg, rgba(8,145,178,0.15) 0%, rgb(15,23,42) 60%)',
+        }}
+      >
+        {/* Subtle grid overlay via inline SVG — not a Tailwind utility so it won't be purged */}
+        <div
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{
+            backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2306b6d4' fill-opacity='0.3'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E\")",
+          }}
+        />
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <p className="text-xs text-cyan-400 font-semibold uppercase tracking-widest mb-1">

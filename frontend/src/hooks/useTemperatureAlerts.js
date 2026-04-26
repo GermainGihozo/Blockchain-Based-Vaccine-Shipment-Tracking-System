@@ -1,18 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWatchContractEvent } from 'wagmi'
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../config/contract'
 
 export function useTemperatureAlerts() {
   const [alerts, setAlerts] = useState([])
+  // Track which alert IDs already have a dismiss timer so we don't double-schedule
+  const timerMap = useRef({})
 
-  // Watch for TemperatureAlert events
   useWatchContractEvent({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     eventName: 'TemperatureAlert',
     onLogs(logs) {
-      console.log('New temperature alerts!', logs)
-      
       const newAlerts = logs.map(log => ({
         id: `${log.transactionHash}-${log.logIndex}`,
         shipmentId: Number(log.args.shipmentId),
@@ -23,49 +22,50 @@ export function useTemperatureAlerts() {
         blockNumber: log.blockNumber,
         transactionHash: log.transactionHash,
       }))
-
       setAlerts(prev => [...newAlerts, ...prev])
     },
   })
 
-  // Watch for ShipmentReverted events (related to temperature breaches)
   useWatchContractEvent({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     eventName: 'ShipmentReverted',
     onLogs(logs) {
-      console.log('Shipments reverted!', logs)
-      
-      // You could add additional logic here to correlate with temperature alerts
       logs.forEach(log => {
-        console.log(`Shipment ${log.args.shipmentId} reverted: ${log.args.reason}`)
+        console.log(`[ShipmentReverted] id=${log.args.shipmentId} reason="${log.args.reason}"`)
       })
     },
   })
 
+  // Bug fix: schedule a per-alert timer only once when the alert is first added
+  useEffect(() => {
+    alerts.forEach(alert => {
+      if (timerMap.current[alert.id]) return   // already scheduled
+      timerMap.current[alert.id] = setTimeout(() => {
+        setAlerts(prev => prev.filter(a => a.id !== alert.id))
+        delete timerMap.current[alert.id]
+      }, 30_000)
+    })
+  }, [alerts])
+
+  // Clean up all timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(timerMap.current).forEach(clearTimeout)
+    }
+  }, [])
+
   const dismissAlert = (alertId) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== alertId))
+    clearTimeout(timerMap.current[alertId])
+    delete timerMap.current[alertId]
+    setAlerts(prev => prev.filter(a => a.id !== alertId))
   }
 
   const dismissAllAlerts = () => {
+    Object.values(timerMap.current).forEach(clearTimeout)
+    timerMap.current = {}
     setAlerts([])
   }
 
-  // Auto-dismiss alerts after 30 seconds (optional)
-  useEffect(() => {
-    if (alerts.length === 0) return
-
-    const timer = setTimeout(() => {
-      setAlerts(prev => prev.slice(0, -1)) // Remove oldest alert
-    }, 30000)
-
-    return () => clearTimeout(timer)
-  }, [alerts])
-
-  return {
-    alerts,
-    dismissAlert,
-    dismissAllAlerts,
-    hasAlerts: alerts.length > 0,
-  }
+  return { alerts, dismissAlert, dismissAllAlerts, hasAlerts: alerts.length > 0 }
 }
