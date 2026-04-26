@@ -18,6 +18,7 @@ export default defineConfig({
         './src/components/CreateShipment.jsx',
         './src/components/GasBudgetTracker.jsx',
         './src/components/TemperatureAlertOverlay.jsx',
+        './src/components/SensorSimulator.jsx',
         './src/hooks/useTemperatureAlerts.js',
         './src/config/contract.js',
       ],

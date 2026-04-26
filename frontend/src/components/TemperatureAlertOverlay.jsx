@@ -1,112 +1,100 @@
-import { AlertTriangle, X, Thermometer } from 'lucide-react'
+import { X, Thermometer, AlertTriangle, ShieldAlert } from 'lucide-react'
 
-function TemperatureAlertOverlay({ alerts, onDismiss }) {
-  if (!alerts || alerts.length === 0) return null
+function formatTemp(raw) {
+  return `${(raw / 100).toFixed(1)} °C`
+}
 
-  const latestAlert = alerts[0] // Show the most recent alert
+export default function TemperatureAlertOverlay({ alerts, onDismiss }) {
+  if (!alerts?.length) return null
 
-  const formatTemperature = (temp) => {
-    return (temp / 100).toFixed(1) + '°C'
-  }
-
-  const getAlertTypeInfo = (alertType) => {
-    switch (alertType) {
-      case 'CRITICAL_HIGH':
-        return {
-          title: 'CRITICAL HIGH TEMPERATURE',
-          color: 'text-red-100',
-          bgColor: 'bg-red-600',
-          icon: '🔥'
-        }
-      case 'CRITICAL_LOW':
-        return {
-          title: 'CRITICAL LOW TEMPERATURE',
-          color: 'text-blue-100',
-          bgColor: 'bg-blue-600',
-          icon: '🧊'
-        }
-      default:
-        return {
-          title: 'TEMPERATURE ALERT',
-          color: 'text-red-100',
-          bgColor: 'bg-red-600',
-          icon: '⚠️'
-        }
-    }
-  }
-
-  const alertInfo = getAlertTypeInfo(latestAlert.alertType)
+  const alert = alerts[0]
+  const isHigh = alert.alertType === 'CRITICAL_HIGH'
 
   return (
-    <div className={`temperature-alert-overlay ${alertInfo.bgColor}`}>
-      <div className="text-center text-white max-w-md mx-auto p-8">
-        {/* Alert Icon */}
-        <div className="text-6xl mb-4 animate-bounce-slow">
-          {alertInfo.icon}
-        </div>
+    <div className="alert-overlay animate-fade-in" role="alertdialog" aria-modal="true">
+      {/* Animated glow ring */}
+      <div className={`absolute inset-0 pointer-events-none ${
+        isHigh ? 'animate-glow-red' : ''
+      }`} />
 
-        {/* Alert Title */}
-        <h1 className={`text-3xl font-bold mb-4 ${alertInfo.color}`}>
-          {alertInfo.title}
-        </h1>
+      <div className="relative w-full max-w-md mx-4">
+        {/* Card */}
+        <div className={`rounded-2xl border-2 overflow-hidden shadow-2xl ${
+          isHigh
+            ? 'border-red-500/60 bg-slate-950'
+            : 'border-blue-500/60 bg-slate-950'
+        }`}>
 
-        {/* Alert Details */}
-        <div className="bg-white bg-opacity-20 rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-center mb-4">
-            <Thermometer className="w-8 h-8 mr-2" />
-            <span className="text-2xl font-bold">
-              {formatTemperature(latestAlert.temperature)}
-            </span>
+          {/* Top stripe */}
+          <div className={`h-1.5 w-full ${isHigh ? 'bg-red-500' : 'bg-blue-500'}`} />
+
+          <div className="p-8 text-center">
+            {/* Icon */}
+            <div className={`w-20 h-20 rounded-full mx-auto mb-5 flex items-center justify-center ${
+              isHigh ? 'bg-red-500/15 border border-red-500/30' : 'bg-blue-500/15 border border-blue-500/30'
+            }`}>
+              <ShieldAlert className={`w-10 h-10 ${isHigh ? 'text-red-400' : 'text-blue-400'}`} />
+            </div>
+
+            {/* Title */}
+            <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${
+              isHigh ? 'text-red-500' : 'text-blue-500'
+            }`}>
+              {isHigh ? '🔥 Critical High Temperature' : '🧊 Critical Low Temperature'}
+            </p>
+            <h2 className="text-2xl font-bold text-white mb-1">
+              Temperature Breach
+            </h2>
+            <p className="text-slate-400 text-sm mb-6">
+              Shipment #{alert.shipmentId} has been automatically reverted
+            </p>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <Stat label="Detected" value={formatTemp(alert.temperature)} accent={isHigh ? 'text-red-400' : 'text-blue-400'} />
+              <Stat label="Threshold" value={formatTemp(alert.threshold)} accent="text-slate-300" />
+              <Stat label="Time" value={new Date(alert.timestamp * 1000).toLocaleTimeString()} accent="text-slate-300" />
+            </div>
+
+            {/* Pending count */}
+            {alerts.length > 1 && (
+              <p className="text-xs text-slate-500 mb-4">
+                +{alerts.length - 1} more alert{alerts.length > 2 ? 's' : ''} pending
+              </p>
+            )}
+
+            {/* Actions */}
+            <button
+              onClick={() => onDismiss(alert.id)}
+              className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors ${
+                isHigh
+                  ? 'bg-red-500 hover:bg-red-400 text-white'
+                  : 'bg-blue-500 hover:bg-blue-400 text-white'
+              }`}
+            >
+              Acknowledge Alert
+            </button>
           </div>
-          
-          <div className="space-y-2 text-sm">
-            <p>
-              <strong>Shipment ID:</strong> #{latestAlert.shipmentId}
-            </p>
-            <p>
-              <strong>Threshold:</strong> {formatTemperature(latestAlert.threshold)}
-            </p>
-            <p>
-              <strong>Time:</strong> {new Date(latestAlert.timestamp * 1000).toLocaleString()}
-            </p>
-          </div>
         </div>
 
-        {/* Alert Message */}
-        <p className="text-lg mb-6 text-white">
-          Vaccine shipment has exceeded safe temperature limits!
-          <br />
-          <span className="text-sm opacity-90">
-            Shipment has been automatically reverted for safety.
-          </span>
-        </p>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col space-y-3">
-          <button
-            onClick={() => onDismiss(latestAlert.id)}
-            className="bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-          >
-            Acknowledge Alert
-          </button>
-          
-          {alerts.length > 1 && (
-            <p className="text-sm text-white opacity-75">
-              {alerts.length - 1} more alert(s) pending
-            </p>
-          )}
-        </div>
-
-        {/* Close Button */}
+        {/* Close */}
         <button
-          onClick={() => onDismiss(latestAlert.id)}
-          className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
+          onClick={() => onDismiss(alert.id)}
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+          aria-label="Close"
         >
-          <X className="w-6 h-6" />
+          <X className="w-4 h-4" />
         </button>
       </div>
     </div>
   )
 }
 
-export default TemperatureAlertOverlay
+function Stat({ label, value, accent }) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
+      <p className="text-xs text-slate-600 mb-1">{label}</p>
+      <p className={`text-sm font-bold font-mono ${accent}`}>{value}</p>
+    </div>
+  )
+}

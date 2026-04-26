@@ -3,30 +3,33 @@ import { ConnectButton } from '@rainbow-me/rainbowkit'
 import Dashboard from './components/Dashboard'
 import TemperatureAlertOverlay from './components/TemperatureAlertOverlay'
 import { useTemperatureAlerts } from './hooks/useTemperatureAlerts'
+import { Activity } from 'lucide-react'
 
 function App() {
   const { isConnected } = useAccount()
   const { alerts, dismissAlert } = useTemperatureAlerts()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-950 bg-grid-slate">
 
-      {/* ── Temperature Alert Overlay (fixed, full-screen) ── */}
+      {/* Alert overlay */}
       {alerts.length > 0 && (
         <TemperatureAlertOverlay alerts={alerts} onDismiss={dismissAlert} />
       )}
 
-      {/* ── Header ── */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🧬</span>
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
+              <Activity className="w-4 h-4 text-cyan-400" />
+            </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 leading-tight">
-                Vaccine Shipment Tracker
+              <h1 className="text-sm font-bold text-white leading-tight tracking-wide">
+                VaccineChain
               </h1>
-              <p className="text-xs text-gray-400 hidden sm:block">
-                Real-time cold-chain monitoring
+              <p className="text-[10px] text-slate-500 hidden sm:block">
+                Cold-chain monitoring · Hardhat Local
               </p>
             </div>
           </div>
@@ -34,36 +37,71 @@ function App() {
         </div>
       </header>
 
-      {/* ── Main ── */}
+      {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isConnected ? (
           <Dashboard />
         ) : (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="text-6xl mb-6">🔗</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect Your Wallet</h2>
-            <p className="text-gray-500 mb-8 max-w-sm">
-              Connect MetaMask (Hardhat Local, chain&nbsp;31337) to access the
-              vaccine shipment tracking dashboard.
-            </p>
-            <ConnectButton />
-            <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 max-w-sm text-left">
-              <p className="font-semibold mb-1">Quick setup</p>
-              <ol className="list-decimal list-inside space-y-1 text-xs">
-                <li>Open MetaMask → Add Network</li>
-                <li>RPC URL: <code className="bg-yellow-100 px-1 rounded">http://127.0.0.1:8545</code></li>
-                <li>Chain ID: <code className="bg-yellow-100 px-1 rounded">31337</code></li>
-                <li>Import a Hardhat account private key</li>
-              </ol>
-            </div>
-          </div>
+          <LandingScreen />
         )}
       </main>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-gray-200 mt-12 py-6 text-center text-xs text-gray-400">
-        Vaccine Shipment Tracker — ensuring cold-chain integrity on-chain
+      {/* Footer */}
+      <footer className="border-t border-slate-800 mt-16 py-6 text-center text-xs text-slate-600">
+        VaccineChain — on-chain cold-chain integrity &nbsp;·&nbsp; Hardhat Local (chain 31337)
       </footer>
+    </div>
+  )
+}
+
+function LandingScreen() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+      {/* Hero */}
+      <div className="relative mb-8">
+        <div className="w-24 h-24 rounded-3xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto">
+          <span className="text-5xl">🧬</span>
+        </div>
+        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-cyan-500 animate-ping-slow" />
+      </div>
+
+      <h2 className="text-4xl font-bold text-white mb-3">VaccineChain</h2>
+      <p className="text-slate-400 mb-2 max-w-md">
+        Real-time blockchain tracking for high-value vaccine shipments.
+        Temperature breaches trigger automatic on-chain reversion.
+      </p>
+      <p className="text-slate-500 text-sm mb-10">Connect your wallet to access the dashboard.</p>
+
+      <ConnectButton />
+
+      {/* Setup card */}
+      <div className="mt-10 card max-w-sm text-left animate-slide-up">
+        <p className="text-xs font-semibold text-cyan-400 uppercase tracking-widest mb-3">
+          MetaMask Setup
+        </p>
+        <ol className="space-y-2 text-sm text-slate-400">
+          <li className="flex gap-2">
+            <span className="text-cyan-500 font-bold shrink-0">1.</span>
+            MetaMask → <em>Add a network manually</em>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-cyan-500 font-bold shrink-0">2.</span>
+            RPC URL:&nbsp;
+            <code className="bg-slate-800 px-1.5 py-0.5 rounded text-cyan-300 text-xs">
+              http://127.0.0.1:8545
+            </code>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-cyan-500 font-bold shrink-0">3.</span>
+            Chain ID:&nbsp;
+            <code className="bg-slate-800 px-1.5 py-0.5 rounded text-cyan-300 text-xs">31337</code>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-cyan-500 font-bold shrink-0">4.</span>
+            Import a Hardhat private key from the node output
+          </li>
+        </ol>
+      </div>
     </div>
   )
 }
